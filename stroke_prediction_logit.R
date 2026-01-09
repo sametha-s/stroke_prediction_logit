@@ -106,7 +106,6 @@ model_reduced <- glm(stroke ~ gender + age + hypertension + avg_glucose_level,
                      family = "binomial")
 
 summary(model_reduced)
-# removing 
 
 
 ## Compare reduced with full model (LRT)
