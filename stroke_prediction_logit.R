@@ -1,4 +1,4 @@
-## Github repo: 
+## Github repo: https://github.com/sametha-s/stroke_prediction_logit
 
 library(tidyverse)
 library(gt)
