@@ -103,7 +103,7 @@ summary(model)
 # do not drop variables as they are known risk factors of stroke
 
 ## Reduced model (Removing all marginally/non significant variables)
-model_reduced <- glm(stroke ~ gender + age + hypertension + avg_glucose_level,
+model_reduced <- glm(stroke ~ age + hypertension + avg_glucose_level,
                      data = stroke_cc,
                      family = "binomial")
 
@@ -130,7 +130,6 @@ round(exp(cbind(OR = coef(model), confint(model))), 3)
 
 
 ## Visualization
-
 ## Bar plots: stroke prevalence by categorical predictors
 
 # gender
