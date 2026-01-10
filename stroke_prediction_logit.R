@@ -5,6 +5,7 @@ library(gt)
 library(finalfit)
 library(ggplot2)
 library(car)
+library(pROC)
 
 
 ## Load dataset
@@ -79,6 +80,7 @@ sapply(stroke_cc, levels)
 
 # Reset row names to be 1:n
 rownames(stroke_cc) <- NULL
+nrow(stroke_cc)
 View(stroke_cc)
 
 # Change reference level of smoking_status from "formerly smoked: to "never smoked"
@@ -205,7 +207,6 @@ stroke_cc %>%
 
 
 ## Assumption checking
-
 # 1. Linearity of continuous variables
 stroke_cc %>%
   select(age, avg_glucose_level, bmi) %>%
@@ -220,6 +221,92 @@ stroke_cc %>%
 vif(model)
 # All variables have a VIF < 5
 # Multicollinearity assumption is verified
+
+########################### PREDICTION #########################################
+set.seed(234)
+
+# Generate random indices for the training and testing sets
+train_indices <- sample(nrow(stroke_cc), 0.7 * nrow(stroke_cc))   # 70% training
+test_indices <- setdiff(1:nrow(stroke_cc), stroke_train_indices)  # 30% testing
+
+# Create training and testing sets using indices
+train_data <- stroke_cc[train_indices, ]
+test_data <- stroke_cc[test_indices, ]
+
+# Check size of testing and training datasets
+nrow(train_data)
+nrow(test_data)
+
+####### TRAIN MODEL TO PREDICT STROKE ##########################################
+stroke_predict_model <- glm(stroke ~ . , 
+                          data = train_data,
+                          family = "binomial")
+
+####### PREDICT STROKE USING MODEL #############################################
+stroke_predict <- predict(stroke_predict_model, test_data, type = "response")
+
+############## 0.5 THRESHOLD ##################################################
+pred_class <- ifelse(stroke_predict > 0.5, 1, 0)
+
+# CHECK MODEL PERFORMANCE AT 0.5
+# confusion matrix
+table(Predicted = pred_class, Actual = test_data$stroke)
+
+# accuracy
+mean(pred_class == test_data$stroke)
+
+
+thresholds <- c(0.3, 0.2, 0.14, 0.1)
+
+get_row <- function(t) {
+  pred <- ifelse(stroke_predict > t, 1, 0)
+  TN <- sum(pred == 0 & test_data$stroke == 0)
+  TP <- sum(pred == 1 & test_data$stroke == 1)
+  FP <- sum(pred == 1 & test_data$stroke == 0)
+  FN <- sum(pred == 0 & test_data$stroke == 1)
+  sensitivity <- TP / (TP + FN)
+  specificity <- TN / (TN + FP)
+  data.frame(threshold = t, TP, FN, FP, TN, sensitivity, specificity)
+}
+
+summary_tbl <- do.call(rbind, lapply(thresholds, get_row))
+summary_tbl
+
+####### 0.1 THRESHOLD ##########################################################
+new_pred_class <- ifelse(stroke_predict > 0.1, 1, 0)
+
+## Check model performance at 0.1
+# confusion matrix
+table(Predicted = new_pred_class, Actual = test_data$stroke)
+
+# accuracy
+mean(new_pred_class == test_data$stroke)
+
+############### AUC ############################################################
+roc_obj <- roc(test_data$stroke, stroke_predict)
+auc(roc_obj)
+
+
+############# PREDICT NEW PATIENTS #############################################
+# assume new_patients has the same predictor columns as stroke_cc (except stroke)
+new_patients <- data.frame(
+  gender            = c("Male", "Female", "Female"),
+  age               = c(55, 72, 40),
+  hypertension      = factor(c(1, 0, 0)),
+  heart_disease     = factor(c(0, 1, 0)),
+  avg_glucose_level = c(110, 180, 95),
+  bmi               = c(27.5, 31.2, 23.0),
+  smoking_status    = c("formerly smoked", "never smoked", "smokes"),
+  stringsAsFactors  = TRUE
+)
+new_prob  <- predict(stroke_predict_model, newdata = new_patients, type = "response")
+new_class <- ifelse(new_prob > 0.1, 1, 0)
+
+new_prob
+new_class
+
+
+
 
 
 
