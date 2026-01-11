@@ -216,6 +216,17 @@ stroke_cc %>%
   geom_smooth(method = "lm") +
   facet_wrap(~name)
 
+stroke_cc_bt <- stroke_cc
+stroke_cc_bt$stroke_num <- as.numeric(as.character(stroke_cc_bt$stroke))
+
+bt_out <- boxTidwell(
+  stroke_num ~ age + avg_glucose_level + bmi,
+  other.x = ~ gender + hypertension + heart_disease + smoking_status,
+  data    = stroke_cc_bt
+)
+
+bt_out 
+
 # 2. Multicollinearity 
 vif(model)
 # All variables have a VIF < 5
