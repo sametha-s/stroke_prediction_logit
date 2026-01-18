@@ -200,6 +200,16 @@ mean(new_pred_class == test_data$stroke)
 roc_obj <- roc(test_data$stroke, stroke_predict)
 auc(roc_obj)
 
+plot(roc_obj,
+     col = "steelblue",
+     main = "ROC Curve for Stroke Model",
+     print.auc = TRUE)   # prints AUC on the plot
+
+abline(a = 0, b = 1, lty = 2, col = "red")  # random classifier line
+
+coords(roc_obj, x = 0.10, input = "threshold",
+       ret = c("specificity","sensitivity","fpr","tpr"))
+
 
 ############# PREDICT NEW PATIENTS #############################################
 # assume new_patients has the same predictor columns as stroke_cc (except stroke)
