@@ -2,10 +2,10 @@
 
 library(tidyverse)
 library(gt)
-library(finalfit)
 library(ggplot2)
-library(car)
 library(pROC)
+library(finalfit)
+library(car)
 
 
 ## Load dataset
@@ -216,16 +216,6 @@ stroke_cc %>%
   geom_smooth(method = "lm") +
   facet_wrap(~name)
 
-stroke_cc_bt <- stroke_cc
-stroke_cc_bt$stroke_num <- as.numeric(as.character(stroke_cc_bt$stroke))
-
-bt_out <- boxTidwell(
-  stroke_num ~ age + avg_glucose_level + bmi,
-  other.x = ~ gender + hypertension + heart_disease + smoking_status,
-  data    = stroke_cc_bt
-)
-
-bt_out 
 
 # 2. Multicollinearity 
 vif(model)
@@ -237,7 +227,7 @@ set.seed(234)
 
 # Generate random indices for the training and testing sets
 train_indices <- sample(nrow(stroke_cc), 0.7 * nrow(stroke_cc))   # 70% training
-test_indices <- setdiff(1:nrow(stroke_cc), stroke_train_indices)  # 30% testing
+test_indices <- setdiff(1:nrow(stroke_cc), train_indices)  # 30% testing
 
 # Create training and testing sets using indices
 train_data <- stroke_cc[train_indices, ]
@@ -251,6 +241,7 @@ nrow(test_data)
 stroke_predict_model <- glm(stroke ~ . , 
                           data = train_data,
                           family = "binomial")
+
 
 ####### PREDICT STROKE USING MODEL #############################################
 stroke_predict <- predict(stroke_predict_model, test_data, type = "response")
@@ -266,8 +257,7 @@ table(Predicted = pred_class, Actual = test_data$stroke)
 mean(pred_class == test_data$stroke)
 
 
-thresholds <- c(0.3, 0.2, 0.14, 0.1)
-
+thresholds <- c(0.5, 0.4, 0.3, 0.2, 0.14, 0.1)
 get_row <- function(t) {
   pred <- ifelse(stroke_predict > t, 1, 0)
   TN <- sum(pred == 0 & test_data$stroke == 0)
