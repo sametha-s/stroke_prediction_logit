@@ -129,83 +129,7 @@ round(exp(cbind(OR = coef(model), confint(model))), 3)
 # smoking_status: not significant as 1 is included in CI
 
 
-## Visualization
-## Bar plots: stroke prevalence by categorical predictors
-
-# gender
-stroke_cc %>%
-  count(gender, stroke) %>%
-  group_by(gender) %>%
-  mutate(prop = n / sum(n)) %>%
-  ggplot(aes(gender, prop, fill = factor(stroke))) +
-  geom_col(position = "dodge") +
-  labs(y = "Proportion with/without stroke",
-       fill = "Stroke") +
-  theme_minimal()
-
-# hypertension
-stroke_cc %>%
-  count(hypertension, stroke) %>%
-  group_by(hypertension) %>%
-  mutate(prop = n / sum(n)) %>%
-  ggplot(aes(factor(hypertension), prop, fill = factor(stroke))) +
-  geom_col(position = "dodge") +
-  labs(x = "Hypertension", y = "Proportion", fill = "Stroke") +
-  theme_minimal()
-
-# heart_disease
-stroke_cc %>%
-  count(heart_disease, stroke) %>%
-  group_by(heart_disease) %>%
-  mutate(prop = n / sum(n)) %>%
-  ggplot(aes(factor(heart_disease), prop, fill = factor(stroke))) +
-  geom_col(position = "dodge") +
-  labs(x = "Heart disease", y = "Proportion", fill = "Stroke") +
-  theme_minimal()
-
-# smoking_status
-stroke_cc %>%
-  count(smoking_status, stroke) %>%
-  group_by(smoking_status) %>%
-  mutate(prop = n / sum(n)) %>%
-  ggplot(aes(smoking_status, prop, fill = factor(stroke))) +
-  geom_col(position = "dodge") +
-  labs(y = "Proportion", fill = "Stroke") +
-  theme_minimal() +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1))
-
-
-## Boxplots of continuous vars by stroke (0/1)
-
-# age
-ggplot(stroke_cc, aes(x = factor(stroke), y = age)) +
-  geom_boxplot() +
-  labs(x = "Stroke", y = "Age") +
-  theme_minimal()
-
-# avg_glucose_level
-ggplot(stroke_cc, aes(x = factor(stroke), y = avg_glucose_level)) +
-  geom_boxplot() +
-  labs(x = "Stroke", y = "Average glucose level") +
-  theme_minimal()
-
-# bmi
-ggplot(stroke_cc, aes(x = factor(stroke), y = bmi)) +
-  geom_boxplot() +
-  labs(x = "Stroke", y = "BMI") +
-  theme_minimal()
-
-# Visualize Odds Ratio & 95% CI
-dependent <- "stroke"
-independent <- c("gender", "age", "hypertension", "heart_disease", 
-                 "avg_glucose_level", "bmi", "smoking_status")
-
-stroke_cc %>%
-  or_plot(dependent, independent, 
-          table_text_size = 3.5)
-
-
-## Assumption checking
+### Assumption checking ########################################################
 # 1. Linearity of continuous variables
 stroke_cc %>%
   select(age, avg_glucose_level, bmi) %>%
@@ -222,7 +146,7 @@ vif(model)
 # All variables have a VIF < 5
 # Multicollinearity assumption is verified
 
-########################### PREDICTION #########################################
+########################### DATA TRAINING ######################################
 set.seed(234)
 
 # Generate random indices for the training and testing sets
@@ -237,26 +161,16 @@ test_data <- stroke_cc[test_indices, ]
 nrow(train_data)
 nrow(test_data)
 
-####### TRAIN MODEL TO PREDICT STROKE ##########################################
+####### GLM PREDICTION MODEL ###################################################
 stroke_predict_model <- glm(stroke ~ . , 
                           data = train_data,
                           family = "binomial")
 
 
-####### PREDICT STROKE USING MODEL #############################################
+####### THRESHOLD CHECKING #############################################
 stroke_predict <- predict(stroke_predict_model, test_data, type = "response")
 
-############## 0.5 THRESHOLD ##################################################
-pred_class <- ifelse(stroke_predict > 0.5, 1, 0)
-
-# CHECK MODEL PERFORMANCE AT 0.5
-# confusion matrix
-table(Predicted = pred_class, Actual = test_data$stroke)
-
-# accuracy
-mean(pred_class == test_data$stroke)
-
-
+# Check multiple probability thresholds
 thresholds <- c(0.5, 0.4, 0.3, 0.2, 0.14, 0.1)
 get_row <- function(t) {
   pred <- ifelse(stroke_predict > t, 1, 0)
@@ -282,7 +196,7 @@ table(Predicted = new_pred_class, Actual = test_data$stroke)
 # accuracy
 mean(new_pred_class == test_data$stroke)
 
-############### AUC ############################################################
+# AUC
 roc_obj <- roc(test_data$stroke, stroke_predict)
 auc(roc_obj)
 
